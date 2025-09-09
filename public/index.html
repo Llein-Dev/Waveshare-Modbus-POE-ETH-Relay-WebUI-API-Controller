@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Relay Controller</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body class="h-full bg-industrial-900 text-white font-mono">
+    <!-- Header -->
+    <header class="bg-industrial-800  border-b border-industrial-700 px-6 py-4">
+        <div class="flex container mx-auto items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-8 h-8 bg-status-info rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">Industrial Relay Controller</h1>
+                    <p class="text-sm text-industrial-400">Modbus TCP Control System</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div id="connection-status" class="flex items-center space-x-2">
+                    <div id="status-indicator" class="w-3 h-3 rounded-full bg-status-warning status-indicator"></div>
+                    <span id="status-text" class="text-sm text-industrial-300">Connecting...</span>
+                </div>
+                <div class="text-right text-sm text-industrial-400">
+                    <div>IP: 192.168.1.200:502</div>
+                    <div id="last-update">Last update: --</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Control Panel -->
+        <div class="bg-industrial-800 rounded-lg border border-industrial-700 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-white mb-6 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-status-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4">
+                    </path>
+                </svg>
+                Relay Control Panel
+            </h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="relay-grid">
+                <!-- Relay buttons will be generated here -->
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="bg-industrial-800 rounded-lg border border-industrial-700 p-6">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-status-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                    </path>
+                </svg>
+                System Status
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-industrial-700 rounded-lg p-4">
+                    <div class="text-sm text-industrial-400 mb-1">Active Relays</div>
+                    <div id="active-count" class="text-2xl font-bold text-status-on">0</div>
+                </div>
+                <div class="bg-industrial-700 rounded-lg p-4">
+                    <div class="text-sm text-industrial-400 mb-1">Total Relays</div>
+                    <div class="text-2xl font-bold text-white">8</div>
+                </div>
+                <div class="bg-industrial-700 rounded-lg p-4">
+                    <div class="text-sm text-industrial-400 mb-1">Connection</div>
+                    <div id="connection-text" class="text-2xl font-bold text-status-warning">Connecting</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Configuration Modal -->
+    <div id="config-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden flex items-center justify-center z-50">
+        <div class="bg-industrial-800 rounded-lg border border-industrial-700 p-6  mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Configure Relay <span id="config-relay-id">0</span></h3>
+                <button id="close-modal" class="text-industrial-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="config-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-industrial-300 mb-2">Mode</label>
+                    <select id="config-mode"
+                        class="w-full bg-industrial-700 border border-industrial-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-status-info">
+                        <option value="hold">Hold (Toggle)</option>
+                        <option value="pulse">Pulse (Momentary)</option>
+                    </select>
+                </div>
+
+                <div id="pulse-config" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-industrial-300 mb-2">Pulse Duration (ms)</label>
+                        <input type="number" id="config-ms" min="50" max="10000" value="200"
+                            class="w-full bg-industrial-700 border border-industrial-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-status-info">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-industrial-300 mb-2">Pulse Type</label>
+                        <select id="config-type"
+                            class="w-full bg-industrial-700 border border-industrial-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-status-info">
+                            <option value="on">ON Pulse</option>
+                            <option value="off">OFF Pulse</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit"
+                        class="flex-1 bg-status-info hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                        Save Configuration
+                    </button>
+                    <button type="button" id="cancel-config"
+                        class="flex-1 bg-industrial-600 hover:bg-industrial-500 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        class RelayController {
+            constructor() {
+                this.relayStates = new Array(8).fill(false);
+                this.relayConfigs = {};
+                this.isConnected = false;
+                this.lastUpdate = null;
+                this.updateInterval = null;
+
+                this.init();
+            }
+
+            init() {
+                this.createRelayButtons();
+                this.setupEventListeners();
+                this.startStatusUpdates();
+            }
+
+            createRelayButtons() {
+                const grid = document.getElementById('relay-grid');
+                grid.innerHTML = '';
+
+                for (let i = 0; i < 8; i++) {
+                    const button = document.createElement('div');
+                    button.className = 'bg-industrial-700 rounded-lg p-4 border border-industrial-600';
+                    button.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-white">Relay ${i}</h4>
+                            <button class="config-btn text-industrial-400 hover:text-white transition-colors" data-relay="${i}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="relay-btn w-full h-16 rounded-lg font-bold text-lg transition-all relay-button" 
+                                data-relay="${i}" data-state="false">
+                            <div class="flex items-center justify-center space-x-2">
+                                <div class="status-dot w-3 h-3 rounded-full bg-status-off"></div>
+                                <span>OFF</span>
+                            </div>
+                        </button>
+                        <div class="mt-2 text-xs text-industrial-400 text-center mode-display" data-relay="${i}">
+                            Mode: Hold
+                        </div>
+                    `;
+                    grid.appendChild(button);
+                }
+            }
+
+            setupEventListeners() {
+                // Relay button clicks
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.relay-btn')) {
+                        const relayId = parseInt(e.target.closest('.relay-btn').dataset.relay);
+                        this.toggleRelay(relayId);
+                    }
+
+                    if (e.target.closest('.config-btn')) {
+                        const relayId = parseInt(e.target.closest('.config-btn').dataset.relay);
+                        this.openConfigModal(relayId);
+                    }
+                });
+
+                // Modal controls
+                document.getElementById('close-modal').addEventListener('click', () => this.closeConfigModal());
+                document.getElementById('cancel-config').addEventListener('click', () => this.closeConfigModal());
+
+                // Mode change handler
+                document.getElementById('config-mode').addEventListener('change', (e) => {
+                    const pulseConfig = document.getElementById('pulse-config');
+                    pulseConfig.classList.toggle('hidden', e.target.value !== 'pulse');
+                });
+
+                // Form submission
+                document.getElementById('config-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveConfig();
+                });
+
+                // Close modal on backdrop click
+                document.getElementById('config-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'config-modal') {
+                        this.closeConfigModal();
+                    }
+                });
+            }
+
+            async toggleRelay(relayId) {
+                try {
+                    const response = await fetch(`/api/relay/${relayId}/action`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    console.log(`Relay ${relayId} action:`, result);
+
+                    // Update status immediately
+                    this.updateStatus();
+                } catch (error) {
+                    console.error(`Error controlling relay ${relayId}:`, error);
+                    this.showError(`Failed to control relay ${relayId}`);
+                }
+            }
+
+            async updateStatus() {
+                try {
+                    const response = await fetch('/api/status');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    this.relayStates = data.coils;
+                    this.relayConfigs = data.config;
+                    this.isConnected = true;
+                    this.lastUpdate = new Date();
+
+                    this.updateUI();
+                } catch (error) {
+                    console.error('Error fetching status:', error);
+                    this.isConnected = false;
+                    this.updateConnectionStatus();
+                }
+            }
+
+            updateUI() {
+                // Update relay buttons
+                for (let i = 0; i < 8; i++) {
+                    const button = document.querySelector(`[data-relay="${i}"].relay-btn`);
+                    const statusDot = button.querySelector('.status-dot');
+                    const text = button.querySelector('span');
+                    const modeDisplay = document.querySelector(`[data-relay="${i}"].mode-display`);
+
+                    const isOn = this.relayStates[i];
+                    const config = this.relayConfigs[i] || { mode: 'hold' };
+
+                    button.dataset.state = isOn;
+
+                    if (isOn) {
+                        button.className = 'relay-btn w-full h-16 rounded-lg font-bold text-lg transition-all relay-button bg-status-on hover:bg-green-600 text-white';
+                        statusDot.className = 'status-dot w-3 h-3 rounded-full bg-white';
+                        text.textContent = 'ON';
+                    } else {
+                        button.className = 'relay-btn w-full h-16 rounded-lg font-bold text-lg transition-all relay-button bg-status-off hover:bg-red-600 text-white';
+                        statusDot.className = 'status-dot w-3 h-3 rounded-full bg-white';
+                        text.textContent = 'OFF';
+                    }
+
+                    // Update mode display
+                    let modeText = `Mode: ${config.mode === 'hold' ? 'Hold' : 'Pulse'}`;
+                    if (config.mode === 'pulse') {
+                        modeText += ` (${config.ms || 200}ms, ${config.type || 'on'})`;
+                    }
+                    modeDisplay.textContent = modeText;
+                }
+
+                // Update active count
+                const activeCount = this.relayStates.filter(state => state).length;
+                document.getElementById('active-count').textContent = activeCount;
+
+                this.updateConnectionStatus();
+            }
+
+            updateConnectionStatus() {
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                const connectionText = document.getElementById('connection-text');
+                const lastUpdateEl = document.getElementById('last-update');
+
+                if (this.isConnected) {
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-status-on';
+                    statusText.textContent = 'Connected';
+                    connectionText.textContent = 'Online';
+                    connectionText.className = 'text-2xl font-bold text-status-on';
+
+                    if (this.lastUpdate) {
+                        lastUpdateEl.textContent = `Last update: ${this.lastUpdate.toLocaleTimeString()}`;
+                    }
+                } else {
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-status-off status-indicator';
+                    statusText.textContent = 'Disconnected';
+                    connectionText.textContent = 'Offline';
+                    connectionText.className = 'text-2xl font-bold text-status-off';
+                }
+            }
+
+            openConfigModal(relayId) {
+                const modal = document.getElementById('config-modal');
+                const relayIdSpan = document.getElementById('config-relay-id');
+                const modeSelect = document.getElementById('config-mode');
+                const msInput = document.getElementById('config-ms');
+                const typeSelect = document.getElementById('config-type');
+                const pulseConfig = document.getElementById('pulse-config');
+
+                relayIdSpan.textContent = relayId;
+
+                const config = this.relayConfigs[relayId] || { mode: 'hold', ms: 200, type: 'on' };
+                modeSelect.value = config.mode;
+                msInput.value = config.ms || 200;
+                typeSelect.value = config.type || 'on';
+
+                pulseConfig.classList.toggle('hidden', config.mode !== 'pulse');
+
+                modal.classList.remove('hidden');
+                modal.dataset.relayId = relayId;
+            }
+
+            closeConfigModal() {
+                document.getElementById('config-modal').classList.add('hidden');
+            }
+
+            async saveConfig() {
+                const modal = document.getElementById('config-modal');
+                const relayId = parseInt(modal.dataset.relayId);
+                const mode = document.getElementById('config-mode').value;
+                const ms = parseInt(document.getElementById('config-ms').value);
+                const type = document.getElementById('config-type').value;
+
+                const config = { mode };
+                if (mode === 'pulse') {
+                    config.ms = ms;
+                    config.type = type;
+                }
+
+                try {
+                    const response = await fetch(`/api/config/${relayId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    console.log(`Config saved for relay ${relayId}:`, result);
+
+                    this.closeConfigModal();
+                    this.updateStatus();
+                } catch (error) {
+                    console.error(`Error saving config for relay ${relayId}:`, error);
+                    this.showError(`Failed to save configuration for relay ${relayId}`);
+                }
+            }
+
+            showError(message) {
+                // Simple error display - could be enhanced with a proper notification system
+                alert(message);
+            }
+
+            startStatusUpdates() {
+                // Initial update
+                this.updateStatus();
+
+                // Set up periodic updates
+                this.updateInterval = setInterval(() => {
+                    this.updateStatus();
+                }, 1000);
+            }
+
+            destroy() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                }
+            }
+        }
+
+        // Initialize the controller when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.relayController = new RelayController();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.relayController) {
+                window.relayController.destroy();
+            }
+        });
+    </script>
+</body>
+</htm
